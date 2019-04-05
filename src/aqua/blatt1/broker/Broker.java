@@ -9,6 +9,7 @@ import aqua.blatt1.common.msgtypes.RegisterResponse;
 import messaging.Endpoint;
 import messaging.Message;
 
+import javax.swing.*;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
@@ -22,15 +23,25 @@ public class Broker {
     private ClientCollection clients = new ClientCollection();
     private ExecutorService executorService = Executors.newFixedThreadPool(16);
     private ReadWriteLock lock = new ReentrantReadWriteLock();
+    private volatile boolean stopRequested = false;
 
     public static void main(String[] args) {
         new Broker().broker();
     }
 
     public void broker() {
-        while (true) {
+        showStopDialog();
+        while (!stopRequested) {
             executorService.submit(new BrokerTask(endpoint.blockingReceive()));
         }
+    }
+
+    private void showStopDialog() {
+        final Thread stopThread = new Thread(() -> SwingUtilities.invokeLater(() -> {
+            JOptionPane.showMessageDialog(null, "Press ok to stop the server");
+            stopRequested = true;
+        }));
+        stopThread.run();
     }
 
     public void register(InetSocketAddress socketAddress) {
