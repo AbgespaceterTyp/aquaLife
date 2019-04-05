@@ -6,6 +6,7 @@ import aqua.blatt1.common.msgtypes.DeregisterRequest;
 import aqua.blatt1.common.msgtypes.HandoffRequest;
 import aqua.blatt1.common.msgtypes.RegisterRequest;
 import aqua.blatt1.common.msgtypes.RegisterResponse;
+import aqua.blatt2.broker.PoisonPill;
 import messaging.Endpoint;
 import messaging.Message;
 
@@ -38,7 +39,7 @@ public class Broker {
 
     private void showStopDialog() {
         final Thread stopThread = new Thread(() -> SwingUtilities.invokeLater(() -> {
-            JOptionPane.showMessageDialog(null, "Press ok to stop the server");
+            JOptionPane.showMessageDialog(null, "Press ok to stop server receiving messages");
             stopRequested = true;
         }));
         stopThread.run();
@@ -71,6 +72,11 @@ public class Broker {
         lock.readLock().unlock();
     }
 
+    public void shutdown() {
+        stopRequested = true;
+        executorService.shutdown();
+    }
+
     private final class BrokerTask implements Runnable {
 
         private Message message;
@@ -90,6 +96,8 @@ public class Broker {
             } else if (payload instanceof HandoffRequest) {
                 FishModel fish = ((HandoffRequest) payload).getFish();
                 handoffFish(senderAddress, fish);
+            } else if (payload instanceof PoisonPill) {
+                shutdown();
             }
         }
     }
